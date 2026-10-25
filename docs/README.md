@@ -28,7 +28,7 @@ away. Current state: **r47**, 12 of 13 audit gates passing, images in
 | r06 | FAIL — `docs/reviews/r06-verdict.md` |
 | r11 | FAIL — `docs/reviews/r11-verdict.md` |
 | r25 | FAIL — `docs/reviews/r25-verdict.md`; the decisive one, found that the bands sat side by side instead of one behind another |
-| r47 | awaiting review — two-massif valley composition, opaque painted mist, varied summit archetypes |
+| r47 | **FAIL, self-reviewed** — `docs/reviews/r47-self-review.md`. The independent reviewer could not be launched; this verdict is mine, not independent. Composition and structure now hold, but the flanks are still a repeated chevron run and there is no warm light on any rock face |
 
 The audit loop and what each round's failure taught is tabulated in
 `25-art-pipeline.md`. The two corrections it forced on the *plan* are recorded at
