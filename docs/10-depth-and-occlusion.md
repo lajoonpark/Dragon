@@ -166,3 +166,63 @@ That ghost pass is worth calling out: place a very low-alpha copy of the
 dragon's silhouette *behind* the mist band it's passing through. The dragon
 reads as being inside the fog rather than erased by it. This is the single
 cheapest "wow" in the whole renderer.
+
+---
+
+## Correction from the r26–r47 audit loop: mist is opaque paint, not alpha
+
+The plan above says each mist band is "a wide, tiling, low-contrast dither
+texture" and that a ridge should "genuinely dissolve into mist at its base".
+**That is wrong, and the prototype disproved it.** This is the one place where
+the plan and the working art disagree, so the reasons are worth recording.
+
+### What went wrong
+
+Painting each mountain base as a per-column **alpha ramp** — opacity falling to
+zero over the last N rows — produced a **picket fence**: because the ramp is
+quantised to 8 bits and then to discrete ramp entries, every column ends in the
+same few steps, and adjacent columns land on the same thresholds. The eye reads
+the result not as fog but as vertical bars of varying height. It was the single
+most reliable way to make the layer look machine-made.
+
+A second failure compounded it: with alpha in play, "how much mountain is here"
+became a continuous value, so any change to the silhouette silently changed the
+base shading everywhere, and the audit could not tell a bad silhouette from bad
+mist.
+
+### What actually works
+
+The mist is **opaque painted colour**, drawn in front, in the same palette as
+everything else. The rock does not fade out; it is **covered**. Concretely:
+
+- Each mass is painted to the full bottom of the frame. **No mass may terminate
+  visibly.** (r44 failed because far bands stopped at y=152–198, above the mist
+  top at 214 — the rock ended in mid-air and drew a horizontal line across the
+  frame.)
+- The mist is drawn last, back to front, from a cloudy **top edge** down to the
+  frame bottom.
+- The top edge is a sum of sines plus a **slow sway that is ADDED, not
+  multiplied**. Multiplying the fine sine sum by a slow sine made the two cancel:
+  the edge varied only 9px across 480 columns, i.e. a straight rule. Adding gives
+  40px of genuine sweep.
+- Three or more authored cream depths, selected by distance below the top edge,
+  with boundaries perturbed by the edge function. The cloud is a **vertical
+  value ramp with a wavy top**, never a two-tone patchwork.
+
+### Why this is also better for the dragon
+
+The opaque mist is *easier* to occlude against, not harder. Because the mist is a
+front-layer draw with a known top edge, the depth field simply says "everything
+below this height at this band is near-camera". The dragon passing behind it is
+one comparison, and the "ghost pass" described above still works — but it is a
+low-alpha copy of the dragon painted *onto* the mist, not the dragon showing
+through a transparent mist. Same visual result, none of the quantisation.
+
+### The gate that had to change
+
+`REVIEW-layer.md` gate 8 asks whether the alpha channel "genuinely dissolves".
+That criterion was written before the mist was opaque and it now contradicts the
+art. It is deliberately left in place for the *layer* export (which does carry
+alpha, for the compositor), but it must not be read as "the mist should be a
+transparent gradient". If gate 8 ever pushes toward a per-column alpha fade, the
+gate is wrong and the fade is the bug.

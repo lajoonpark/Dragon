@@ -271,3 +271,59 @@ A mist band with a flat top edge is a scan bar. Mist is given:
   horizon and darken with distance.
 - No dragons yet. The notch is sized for them: roughly 170px of clear air
   horizontally at the mouth, which comfortably takes a body 140px long.
+
+---
+
+## Attempts 12–47: what a measured audit loop actually found
+
+v1–v6 above were judged by eye. From v12 onward the generator ran a **numeric
+audit** on every render, with hard gates, and the loop became: generate → audit →
+look at 2× → fix the *measured* defect → archive an independent review verdict
+(`docs/reviews/`). Four reviews, three FAILs. This table is the useful part, and
+it is longer than v1–v6 because the failures got subtler, not rarer.
+
+| Iter | Measured symptom | Actual cause | Fix |
+|---|---|---|---|
+| r12 | band 5 covered 95.6% of frame | near bands were drawn taller *and* wider than far ones | rebuilt as a V-notch: near massifs are narrow edge cliffs cropped by the frame, far ridges show *inside* the notch |
+| r15 | flat shelf across the valley | every mass shared one flat base row | ragged per-column dissolving base |
+| r18 | strata spilled into the notch as floating beige slabs | region clipping was to the band, not the face | clip regions to the face, inset 6px from skyline; strata forced `offset <= 0` |
+| r18 | near cliffs were *pale*, far ridges dark | `FACE = [3,3,4,4,5,5]` inverted the ramp direction | `FACE` dark→near, pale→far. Atmospheric perspective is a property of the *fill*, not the outline |
+| r20 | warm pixels 0.15% | coat-of-paint ramp was never actually reached by any region | rewrote region offsets against the real ramp → 10.9% |
+| r23 | hard vertical edges inside every mass | rectangles have vertical sides | tapered trapezoids (`tp` px/side) |
+| r23 | slabs collapsed to one tone | `FACE[5]=1` mapped to `ramp[1]` while `DARK[0]=ramp[0]` — one entry apart | separate the two tables so a slab can be 2+ entries from its neighbour |
+| r24 | **every band filled the notch — one giant flat box** | `_build_crest` carried `last` across every column, so each edge cliff's crest ran to the opposite frame edge | reset the carried value at each authored node |
+| r25 | cream slabs as full panels | buttress regions used +4/+5, painting the warm end as a field | cap lit offset at +2; warm only as narrow accents |
+| **r25 verdict** | **reviewer FAIL: bands sat side by side in x-slices, not one behind another** | composition, not shading | — |
+| r26 | — | — | **architectural fix**: full-width crests, drawn strictly back to front, one mass per band. Occlusion became plain overdraw |
+| r26 | base was an alpha fade → visible picket fence | per-column alpha ramp quantised into stripes | mist repainted as an **opaque painted field** with a cloudy top edge |
+| r30 | 200px vertical runs inside faces | no horizontal structure at all | authored bedding lines |
+| r31 | full-frame opacity gate failing on the *sky* | the gate was wrong, not the art | rescoped: nothing *below the skyline* may be transparent |
+| r32 | uniform sawtooth — every summit one triangle | alternating summit/saddle nodes at even spacing ⇒ constant prominence | authored summit archetypes (spire / shoulder / mesa / dome), hand-placed |
+| r33–r36 | plaid | vertical slabs + horizontal bedding = two orthogonal families of flat rects | deleted bedding entirely; strata come from authored darks |
+| r36–r37 | a uniform wall of peaks | evenly distributed peaks read as pattern | valley composition: two edge massifs, deep centre, corridor right of centre |
+| r40 | 126px vertical seams | a slab is an x-range at every y ⇒ dead-vertical edge | slant each slab edge with the crest's own rise |
+| r41 | visible zigzag on cliffs | per-row seam jitter | *jittering is worse than slanting* — steady slope, stepping every 7–9 rows |
+| r44 | rock ended in mid-air above the mist | far band bases terminated at y=152/174/198, above the mist top | every mass runs past the frame bottom; only the front mist ends rock |
+| r45 | 260 columns changing colour on one row | cloud-top sine sum was *multiplied* by a slow sine, so edge variation collapsed to 9px | *add* the slow sway instead of multiplying; two overlapping banks |
+
+### The five transferable lessons
+
+1. **A recalled bug is usually a structural inversion, not a tuning error.**
+   Three separate failures — alpha inverted, ramp direction inverted, `last`
+   carried across columns — all presented as "the picture is wrong in a vague
+   way" and all were fixed by finding the one line where a value ran backwards.
+   Reach for structure before parameters.
+2. **Two orthogonal families of flat regions always read as plaid.** Vertical
+   slabs plus horizontal bedding is a grid no matter how you tune it. Pick one
+   direction per surface.
+3. **Jittering an edge is worse than slanting it.** A per-row random offset
+   reads as digital noise; a steady slope reads as a flank. Rock edges want to be
+   *slanted and stepped*, never wobbled.
+4. **A gate can be wrong.** Two audit gates had to be rewritten (full-frame
+   opacity; flat-run vs seam). When a gate fails but the image looks right, check
+   the gate — but only after assuming the art is wrong first, because it usually
+   is.
+5. **When a metric and a review disagree, believe the review.** The reviewer's
+   one-line diagnosis at r25 ("side by side instead of one behind another")
+   invalidated six rounds of shading work in a single sentence. Numeric gates
+   catch regressions; they cannot catch a wrong composition.

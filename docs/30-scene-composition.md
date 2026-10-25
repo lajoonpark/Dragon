@@ -169,3 +169,79 @@ dragon — and it must *yield* when one appears.
 
 If it ever feels busy, the answer is not more particles. It's fewer systems
 active at once, and a stronger hush.
+
+---
+
+## Composition, corrected by the audit loop (r26–r47)
+
+The archetype library and placement rules above are still right. What the
+prototype changed is **how the bands stack**, and one rule about composition that
+turned out to be the most expensive thing to learn.
+
+### Bands must be one behind another, not side by side
+
+The first six attempts all built the range by placing masses at **x-ranges**:
+band 5 owns x=0–120, band 4 owns x=120–260, and so on, each with its own cluster
+of peaks. Every band was visible, every silhouette was authored, the values were
+right — and it still failed review, because **the bands sat beside each other
+rather than behind each other**. The eye read a frieze of separate objects laid
+out along a shelf, not a range receding into distance.
+
+The fix is architectural, not cosmetic:
+
+- **Every band spans the full frame width**, always. No band "owns" an x-range.
+- Bands are drawn **strictly back to front**: 0 first, 5 last. Occlusion is plain
+  overdraw — no masks, no alpha, no z-order tricks.
+- So what you see of a far band is exactly the parts the near bands *did not
+  cover*: the slivers above a nearer crest and inside a saddle. Depth is a
+  consequence of overdraw, which is how a painting works.
+
+This is also what makes the depth field trivial: drawing order *is* the depth
+order, so each layer's depth value is just its band index.
+
+### Two massifs and a valley beat an even range
+
+Once the bands spanned the frame, the failure mode flipped: the crest became a
+**uniform wall of similar peaks** — visually a pattern, not a landscape.
+
+The reference does the opposite, and it took a rewrite to accept it: a **huge
+massif at each frame edge**, running off the top of the frame, with a **deep
+misty valley** between them, and the far ridges visible only through that gap.
+Every band follows the same recipe:
+
+| Region | Behaviour |
+|---|---|
+| Left third | massif climbing out of frame at top-left |
+| Centre | valley floor; low, varied forms only |
+| Right of centre | the **corridor** — the deepest saddle, widest clear air |
+| Right third | massif climbing out of frame at top-right |
+
+Two rules that follow:
+
+- **The valley floor steps DOWN for each nearer band.** This is what makes the
+  far stack read as crescents above the near ones, and it is the whole of the
+  depth illusion at the composition level.
+- **The corridor must stay clear.** It is the brightest air in the frame and the
+  place a dragon is most legible. Peaks in front of it defeat its purpose.
+
+### The corridor is a design constraint, not leftover space
+
+The reference has no room for a dragon — it is a solid wall of spires. A wallpaper
+needs a hole, because something has to fly through it, and because a scene with no
+calm region is tiring at 8 hours. Budget roughly **170px of clear air** at the
+corridor mouth in a 480px-wide frame, sized so a 140px body passes without
+clipping a ridge.
+
+### Authored summit archetypes, not generated ones
+
+Even with the valley in place, an evenly spaced summit/saddle node list produced a
+sawtooth: every peak the same triangle, because spacing and prominence were
+constant by construction. The summits are now written by hand as named shapes:
+
+- **spire** — steep both flanks, narrow
+- **shoulder** — steep one side, long gentle ramp the other
+- **mesa** — two nodes at nearly the same height, giving a flat-topped block
+- **dome** — broad, low, rounded
+
+Heights, widths and spacing all vary, and nothing is periodic. This is the same
+lesson as the silhouette work at v6: *the shape is a decision.*
