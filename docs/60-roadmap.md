@@ -56,20 +56,28 @@ near rock" is one continuous move with no popping.
 
 **Goal:** a still frame worth framing. Then make it move.
 
-See `25-art-pipeline.md` for how. The short version: hand-author 10 karst
-silhouettes in Aseprite/ASCII, 8 overlay stamps, then compose with the tool.
-**Every pixel of the mountain is a decision; the tool never invents rock.**
-Six procedural attempts failed — that's now evidence, not opinion.
+**The method changed.** See `27-master-image-pipeline.md`: a generated master
+image is the source of truth, reduced to a true pixel grid, then dismantled into
+layers. Code does not invent rock — forty procedural rounds proved it cannot.
+The archetype library and overlay stamps below are cancelled.
 
-Do not author a flat image. Author the layered stack, so the depth field comes
-free and the same art serves the still and the animation.
+The governing rule survives unchanged: **every pixel of the mountain is a
+decision.** What changed is *who makes it* — a model, painting a whole form, the
+way a painter does, instead of arithmetic pretending to.
 
-- [ ] Peak archetype library (start with 6 of the 12).
-- [ ] 5 depth ramps + the palette audit test.
-- [ ] Mist layers (3), animated, with depth bands and soft/hard edges.
+- [ ] Generate and reduce **one** master panel to a true 480×270 pixel grid
+      (D-023). This is the gate for the whole art direction.
+- [ ] Run the acceptance checklist (`27-master-image-pipeline.md`). Fix by
+      regenerating or polishing — **never** by re-deriving in code.
+- [ ] 5 depth ramps + the palette audit test, with the warm gate scoped above
+      the mist top.
+- [ ] Layer-split the master into 6–8 bands with alpha; generate back-to-front
+      so no hole is left behind (D-024).
+- [ ] Mist layers, animated, with depth bands and soft/hard edges.
 - [ ] Water plane + reflections + wobble + dash rows.
 - [ ] Foreground silhouette layer + one anchor object (pavilion first).
-- [ ] Handscroll world strip, 7680px, pan camera, no dragon yet.
+- [ ] Extend to the **1920px** v1 world (4 screens) with a cross-faded loop —
+      not 7680px (D-025). Pan camera, no dragon yet.
 - [ ] Contact-sheet tool for reviewing the whole scroll at once.
 - [ ] Dragon-in-mist ghost pass.
 - [ ] Dragon water reflection.

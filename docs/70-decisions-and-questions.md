@@ -207,6 +207,62 @@ entire image. This is a one-line rule that cost a full iteration to learn.
 **Rejected.** Unconditional `bayer < alpha` writes (looked correct in isolation,
 destroyed the composition).
 
+### D-022 — A generated master image is the source of truth, not a reference
+**Decision.** The landscape comes from an image generation model. The generated
+and reduced image **is** the shipped art. Code does not re-draw it as geometry;
+code reduces it to the palette, splits it into layers, extracts depth, and pans.
+**Why.** Forty rounds of procedural generation proved that a formula cannot make
+a mountain — every attempt produced a named artefact (candles, tombstones,
+tablecloths, sawtooth, chevron flanks). The one successful fix was hand-authoring
+summits with explicit prominence, i.e. *form by decision*. A generation model
+makes that decision as a whole form rather than as a parameter, which is the
+thing arithmetic could never do. The landscape is static, so the master can
+literally be the shipped pixels.
+**Rejected.** Using the image only for "feel" and re-deriving it in code
+(round-trips through the exact quantisation and inversion bugs that cost the
+audit loop, and discards the pixel decisions worth having). Using it as loose
+inspiration for more procedural work (that is the forty rounds again).
+**Consequence.** The archetype library, silhouette authoring, overlay stamps and
+generative shading are all cancelled. The audit harness is promoted to
+acceptance tests for generated art.
+
+### D-023 — Generate at 4x and reduce by per-block mode, never average
+**Decision.** Generate at 1920×1080. Downsample 4:1 with a per-block **mode**
+filter, then quantise to the locked palette with dithering off, then hand-polish.
+**Why.** Models produce pixel-*styled* images: anti-aliased, thousands of
+colours, inconsistently gridded. Averaging creates new intermediate colours and
+destroys the grid; mode keeps the pixel decisions that already exist. The
+hand-polish is not optional — it is the step that makes it pixel art rather than
+AI pixel art, and it is hours per panel, not weeks.
+**Rejected.** Asking the model for 480×270 directly (no detail to salvage).
+Quantising with dither (if the image needs dither to survive quantisation, it has
+too many tones and the source is wrong).
+
+### D-024 — Generate back-to-front, and never cut a hole you cannot fill
+**Decision.** Generate the complete scene first, then generate variants with the
+foreground progressively removed. Over-extend every layer horizontally by at
+least `pan_speed × layer_speed_delta × seconds_of_travel`, and cap parallax.
+**Why.** Lifting a near massif out of a single flat image leaves nothing behind
+it. Generating back-to-front guarantees a complete image under every layer;
+over-extension by the *differential* speed makes the parallax legal by
+construction rather than by hope.
+**Rejected.** Inventing plausible filler rock behind cut layers (it will not
+match, and the mismatch appears exactly where the eye is, at the silhouette).
+Cutting first and inpainting after (works, but you are guessing at content you
+could have generated deliberately).
+
+### D-025 — Ship 4 screens, not 16, in v1
+**Decision.** v1's world is 1920px (4 screens), one region, cross-faded loop.
+Extending to 8 and 16 is deferred until the first four are proven to match.
+**Why.** Independently generated panels drift in palette, light direction, mist
+density and rock character, and the drift compounds. Four panels from one batch
+match; sixteen do not. For a wallpaper, *matching beats long*, and the trade is
+reversible — extending later is additive, whereas shipping sixteen mismatched
+panels is a rebuild.
+**Rejected.** Generating 16 panels independently and hoping. Chained outpainting
+across all 16 from day one (works, drifts slowly, and delays the first real
+panel by days).
+
 ---
 
 ## Open questions
@@ -224,6 +280,9 @@ destroyed the composition).
 | Q9 | Are 30s-mean dragons too frequent — do they become furniture, like a fish tank? | If yes, the fix is lengthening *hero* shot rarity, not lowering the common traverse rate | Phase 3, from real all-day use |
 | Q10 | Does the ambience delta band (0.30–1.20%) actually correlate with feeling alive? | The whole ambient budget rests on this proxy | Phase 2.5 |
 | Q11 | Wayland/GNOME desktop-window support — attempt or scope out? | GNOME fundamentally disallows background-layer clients | Phase 6 |
+| Q12 | Do the generation model's terms allow redistributing generated art in a paid app? | Could invalidate the entire art pipeline late and expensively | **Before Phase 1**, not Phase 5 |
+| Q13 | Does 4:1 mode-reduction actually hold up, or does it need 3:1 / 2:1? | The whole aesthetic rests on the grid being genuine | Phase 1, first panel |
+| Q14 | Can one generation produce 2–3 screens at once (wide aspect), solving consistency outright? | Would make the 4-screen drift problem disappear | Phase 1, first batch |
 
 ## Things we'll probably be wrong about
 
