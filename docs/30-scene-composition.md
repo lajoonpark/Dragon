@@ -158,6 +158,14 @@ explicit choreography.
 
 ## Density budget
 
-To keep stillness: at any moment, the screen should contain
-**0 dragons ~70% of the time**, 1 dragon ~27%, 2+ ~3%.
-If it ever feels busy, the answer is always *fewer dragons, longer gaps*.
+At any moment, the screen should contain
+**0 dragons ~50% of the time**, 1 dragon ~42%, 2+ ~8%.
+Mean gap between dragons ~30s (min 12s, max 90s).
+
+Half the time there is nothing but landscape, which is why ambient life
+(`35-ambient-life.md`) is a load-bearing system and not decoration. The scene
+must reward the eye on its own, at three tempos, without ever competing with a
+dragon — and it must *yield* when one appears.
+
+If it ever feels busy, the answer is not more particles. It's fewer systems
+active at once, and a stronger hush.

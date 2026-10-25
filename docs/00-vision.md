@@ -37,16 +37,27 @@ gets its own document (`10-depth-and-occlusion.md`).
 ### 2. Dragons that feel like weather
 Not mascots. Not sprites that bob up and down. A dragon should read like a
 slow-moving current of air: a serpentine ribbon that follows a curved path,
-banking through turns, wings-less, legs tucked, occasionally coiling. Most of
-the time there is **no dragon on screen at all**. When one crosses, it's an
-event.
+banking through turns, wings-less, legs tucked, occasionally coiling. A dragon
+is on screen roughly **half the time**. The other half, the landscape carries
+the piece on its own — which is why ambient life is a pillar, not polish.
 
-### 3. One world, two products
+### 3. The empty screen is not empty
+Half the time there is no dragon. Those minutes are not a lull; they're the
+baseline the dragon plays against. Wind moves through grass, petals drift and
+land on water, a waterfall never stops, birds cross rarely because they're rare.
+Three tempos — slow world, medium weather, fast punctuation — and everything
+yields when a dragon arrives. See `35-ambient-life.md`.
+
+### 4. One world, many hosts
 `Dragon` (the wallpaper) and `Dragon Timer` (the companion) are the same world
 seen at different zoom levels of attention. Dragon Timer is a small, precise,
 useful tool that happens to open a window onto the same landscape and end with
 a dragon flying through your screen. The aesthetic is not decoration applied to
 a timer — it *is* the product.
+
+And the world is not bound to one OS: macOS first, but the core knows nothing
+about any platform, so Windows and Linux are a host each, not a rewrite. See
+`55-platform-portability.md`.
 
 ## Non-goals (v1)
 
@@ -110,7 +121,12 @@ camera pans across slowly. That gives us variety for free and never loops.
 Open it on a 27" display, at 1m, for ten minutes.
 
 - You forget it's a loop.
+- When no dragon is on screen, you're still watching. Something is always
+  moving — a gust running through grass, petals settling on water, a waterfall
+  that never stops.
 - At least once, a dragon appears somewhere you didn't expect and you go "oh".
 - At least once, you do not notice a dragon at all until it's halfway across.
+- The moment a dragon appears, the small life quiets down — you couldn't say
+  what changed, but the dragon feels *important*.
 - If you crop a random 300×300 region at 1× and put it in a gallery frame, it
   looks like a real pixel-art piece, not a crop of a desktop background.

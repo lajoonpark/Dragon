@@ -65,18 +65,22 @@ a few thousand lines. We own it.
 
 ```
 per frame (target 15 fps):
-  1. advance world pan offset x
-  2. compositor_reset()               // copy cached static strip region
-  3. for layer in static_layers:      // pre-sorted, back→front
-        blit_scroll(layer, x)         // + write depth where alpha
-  4. for dragon in active_dragons (back→front by mean depth):
-        rig_update(dragon)            // rope + sine + depth interp
-        rasterise(dragon)             // per-pixel depth test vs scene_depth
-  5. for mist_layer in animated_mist:
-        blit_scroll(mist_layer, x, t) // mist also writes depth
-  6. water_reflections()
-  7. surface post: vignette, grain
-  8. present
+  1. advance world pan offset x; advance t
+  2. gust_update(t)                     // one field, sampled by everything
+  3. compositor_reset()                 // copy cached static strip region
+  4. for layer in static_layers:        // pre-sorted, back→front
+        blit_scroll(layer, x)           // + write depth where alpha
+  5. for dragon in active_dragons (back→front by mean depth):
+        rig_update(dragon)              // rope + sine + depth interp
+        rasterise(dragon)               // per-pixel depth test vs scene_depth
+  6. for each ambient system (region-gated, ≤4 active):
+        waterfalls, petals, grass, birds, ripples, mist edge, lantern
+        // all deflected by gust(x,t), all scaled by ambience_gain
+  7. for mist_layer in animated_mist:
+        blit_scroll(mist_layer, x, t)   // mist also writes depth
+  8. water_reflections()
+  9. surface post: vignette, grain
+ 10. present
 ```
 
 ### The static/dynamic split (this is the power story)
@@ -253,22 +257,36 @@ apps that can't be quit are the ones users uninstall angrily.
 
 ```
 Dragon/
-  core/            # C99, zero deps — the whole art
-    dragon.h       # public API (init, step, frame, presets, events)
-    world.c scene.c river.c mist.c water.c palette.c
+  core/            # C99, ZERO platform #ifdefs — the whole art
+    include/dragon.h        # public API: init, step, render, event
+    include/dragon_host.h   # the 10-function platform contract
+    world.c scene.c mist.c water.c palette.c dither.c font.c
     rig.c          # rope + ribbon + head stamping
+    ambient.c      # director: which systems are active, region gating
+    wind.c         # gust(x,t) field
+    petals.c grass.c waterfall.c birds.c
     paths.c        # shot table, seeded scheduler
-    dither.c font.c
-  tools/           # Linux iteration loop
-  tests/           # golden frames, invariants
+    clock.c        # timer engine (NO UI, NO AppKit)
+    bus.c          # JSON line framing over host bus
+  tools/           # Linux iteration loop: ppm→png→gif, contact sheets
+  tests/           # golden frames, ambience delta, invariants
   assets/          # peak silhouettes, head directions, ramps (data, not code)
-  platforms/macos/ # Swift host: wallpaper agent + timer app + .saver
-  platforms/web/   # optional: WASM host for the landing page (huge demo value)
+  platform/
+    null/          # stub host, ~80 lines. Always builds. Portability canary.
+    macos/         # Swift: wallpaper agent + timer app + .saver
+    web/           # WASM host (Phase 5)
+    windows/       # Win32 (Phase 6)
+    linux/         # X11 (Phase 6)
   docs/
 ```
 
 `assets/` as **data** (plain text/PGM, not a binary format) matters: we want to
 be able to diff an art change in git and see exactly which pixels moved.
+
+The `platform/null/` host is not a toy — it's the dev loop we actually use on
+Linux, and it's the test that guarantees the core never starts depending on a
+real OS. It's written in Phase 0, before the macOS host exists. See
+`55-platform-portability.md`.
 
 ## The one thing that could sink this
 

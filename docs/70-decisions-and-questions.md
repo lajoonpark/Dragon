@@ -97,6 +97,85 @@ work. Doing it exactly once, at the moment the user is being addressed, is what
 makes the alarm land.
 **Rejected.** Ambient eye contact (uncanny, kills the mood).
 
+### D-012 — Dragons ~50% of the time, ~30s mean gap
+**Decision.** Revised from ~70% empty / 55s mean. New: 0 dragons ~50%, mean gap
+~30s, min 12s, max 90s, pairs ~8%. First dragon 8s after launch.
+**Why.** User direction: 55s felt too sparse — the wallpaper risked being a
+pretty picture you glance at and see nothing. More presence makes it feel
+inhabited.
+**Consequence, and it's the important part.** Half the time the landscape is on
+screen alone, so *ambient life becomes load-bearing*, not decoration. This forced
+D-013.
+**Rejected.** Keeping 55s and fixing it with more ambient motion only — that
+makes a busy screensaver with rare dragons, which is the worse failure.
+
+### D-013 — Ambient life is a system with a measured budget
+**Decision.** Three tempo tiers (slow world / medium weather / fast
+punctuation). 2–4 systems active at once, region-gated, deterministic. Ambient
+density is asserted by a test: `frame_delta / 129600` must sit in **0.30%–1.20%**
+with no dragon, per region.
+**Why.** "Interesting enough" is subjective and we can't eyeball it on a Mac.
+An objective band catches both failure modes — frozen (<0.10%) and busy
+(>2.50%) — mechanically. Crude, but it's a tripwire, and it beats good
+intentions.
+**Rejected.** Piling on effects until it feels alive (becomes a screensaver and
+kills the dragon's read).
+
+### D-014 — Wind is a travelling gust field, not per-object sway
+**Decision.** One global `gust(x, t)` — three overlapping travelling waves plus
+a slow strength envelope — sampled by every deformable thing at its screen x.
+**Why.** Per-object random-phase sine sway is the single loudest tell of an
+animated GIF. Objects bending *together*, with quiet gaps between gusts and a
+consistent direction (opposing the pan, so it feels like a headwind), is what
+turns motion into weather. It's ~30 lines and it drives grass, reeds, branches,
+petals, mist edges, and dragon whiskers.
+**Rejected.** Per-object independent oscillation (reads as a shader effect).
+
+### D-015 — Ambient life yields to dragons (the hush)
+**Decision.** On dragon spawn, `ambience_gain` 1.0 → 0.65 over 2s; slow settle
+back over 4s. Petal spawn halves, birds suspend, gusts weaken, sparkle thins.
+Mist and waterfalls keep going.
+**Why.** It resolves the busy/frozen tension *structurally* instead of by
+endless tuning. It also makes the dragon feel like a physical presence
+displacing air rather than a sprite on top of an animation — users can't say
+what changed, but they feel the dragon matter.
+**Rejected.** Constant ambient level (dragon has to compete); full stop (scene
+looks dead when a dragon appears).
+
+### D-016 — Waterfall is a required v1 element
+**Decision.** At least one waterfall per ~2500px of world, with a scrolling
+dithered core, side haze, a pulsing base mist, and spray flecks.
+**Why.** Highest value-per-pixel in the project: permanent gentle motion (kills
+the frozen failure outright), a colossal scale anchor that makes the peaks
+legible, a vertical compositional event in a horizontal scroll, and it's static
+geometry with an animated texture. It also participates in the depth test, so
+dragons can be half-erased by its spray.
+**Rejected.** Treating it as optional polish.
+
+### D-017 — macOS first, but the core is platform-blind from day one
+**Decision.** All OS contact goes through a 10-function `dr_host` vtable (4
+required: `now`, `present`, `prefs_read`, `prefs_write`). `core/` contains zero
+platform `#ifdef`s, enforced by a CI grep. A `platform/null` stub host exists
+from Phase 0 and is always in the test suite.
+**Why.** User requirement: Windows and Linux must not need a rewrite. The risk
+isn't architectural, it's five small discipline failures (a direct `NSLog`, a
+CoreGraphics type leaking upward, an absolute path). A grep test and a null host
+catch all of them cheaply. Getting this right on day one costs nothing; getting
+it wrong costs a rewrite per platform.
+**Estimated port cost with discipline:** ~2 weeks for web + Windows + Linux X11.
+Without it: ~2 months each.
+**Rejected.** "We'll extract the core later" — extraction after the fact means
+untangling rendering from the platform surface, which is exactly the painful
+part.
+
+### D-018 — The core never touches a platform surface
+**Decision.** Core writes to its own RGBA buffer; the host presents it. No
+CoreGraphics/Metal/GDI/X11 drawable ever reaches core. Same for assets (plain
+text, compiled in), the clock (host provides `now()`, core does fixed-timestep
+math), and IPC (JSON lines through `bus_send`/`bus_poll`).
+**Why.** These four leaks are what actually make ports expensive. Named
+explicitly so we can refuse them at 1am.
+
 ---
 
 ## Open questions
@@ -111,6 +190,9 @@ makes the alarm land.
 | Q6 | Free, paid, or donation? | Affects onboarding, updates, and whether MAS sandbox constraints matter | Phase 5 |
 | Q7 | Do we want the pan to ever reverse direction, or hold a wide shot for a minute? | Holding a wide shot would let a `coil` shot breathe | Phase 2 |
 | Q8 | How do we handle the user's own music (ducking vs. silence)? | Affects the audio design and possibly an audio-session permission | Phase 4 |
+| Q9 | Are 30s-mean dragons too frequent — do they become furniture, like a fish tank? | If yes, the fix is lengthening *hero* shot rarity, not lowering the common traverse rate | Phase 3, from real all-day use |
+| Q10 | Does the ambience delta band (0.30–1.20%) actually correlate with feeling alive? | The whole ambient budget rests on this proxy | Phase 2.5 |
+| Q11 | Wayland/GNOME desktop-window support — attempt or scope out? | GNOME fundamentally disallows background-layer clients | Phase 6 |
 
 ## Things we'll probably be wrong about
 
@@ -121,8 +203,20 @@ Kept honest on purpose:
   compressing. Watch for this in Phase 1, not Phase 5.
 - **15 fps may judder unpleasantly at a 120 Hz display** if the host doesn't
   frame-lock cleanly. Fixable with an integer divisor, but worth measuring.
-- **The 55s mean gap may be far too long** for a wallpaper people only glimpse.
-  First-run should show a dragon within 20s, and we should probably bias toward
-  more dragons than the stillness principle suggests.
+- **30s mean may be too frequent.** Now that dragons are on screen half the
+  time, the risk inverts: they stop being an event and become furniture. The
+  mitigation we're betting on is *variety* (6 shot types, 5 palettes, wide depth
+  range) plus a strong hush — not a lower rate. If that bet fails, lengthen only
+  the hero shots' rarity and leave common traverses alone.
+- **The ambience delta band may be the wrong proxy.** 0.3–1.2% pixel change is
+  measurable, but "alive" might be about *coherence* (a gust travelling) rather
+  than volume. If the number passes and it still feels dead, trust the eye over
+  the test and change what's moving, not how much.
+- **`gust()` may fight the dragon.** Whiskers and mist driven by the same field
+  as the grass could make dragons look wind-blown rather than self-propelled.
+  Likely fix: dragons sample gust at reduced weight, with a phase lag.
 - **Writing the core in C may feel slow to iterate on art.** If so, the answer is
   a hot-reload of `assets/` (plain-text silhouettes), not switching languages.
+- **The `dr_host` abstraction may be slightly wrong on first contact with
+  Windows.** Expect one interface change at the first port; that's cheap and
+  expected. Two or three would mean the abstraction is bad, not unlucky.

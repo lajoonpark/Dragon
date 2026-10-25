@@ -19,7 +19,10 @@ on this machine, as a GIF.
 
 **Goal:** a 3-second GIF of one dragon passing behind one mountain.
 
-- [ ] `core/dragon.h` API sketch (init / step / render / presets).
+- [ ] `core/include/dragon.h` API sketch (init / step / render / presets).
+- [ ] `core/include/dragon_host.h` + `platform/null/` stub host. **Write this
+      first**, before anything else — it's the dev loop and the portability
+      canary, and retrofitting it later is the expensive mistake.
 - [ ] Flat-colour framebuffer, 480×270, PPM out.
 - [ ] Two hard-coded mountain silhouettes at depths 0.30 and 0.70.
 - [ ] Depth buffer + per-pixel test.
@@ -66,10 +69,42 @@ near rock" is one continuous move with no popping.
 **Exit criteria:** export a single still at 4× and it holds up as a print. If it
 doesn't, we keep painting. Do not proceed with an ugly landscape.
 
+## Phase 2.5 — Ambient Life (1–2 weeks)
+
+**Goal:** leave it running with dragons disabled for five minutes and still want
+to watch.
+
+This phase is now load-bearing: with dragons on screen only ~50% of the time,
+the landscape is the product half the time.
+
+- [ ] `gust()` field — travelling gust envelope, quiet gaps, direction opposing
+      the pan. Verify objects near each other bend *together*.
+- [ ] Apply gusts to: grass/reeds, pine clusters, branch tips, mist edges.
+- [ ] **Waterfall**: scrolling dither core, haze, base mist pulse, spray flecks.
+      One per ~2500px of world.
+- [ ] **Petals**: spawn from off-screen blossom trees, sin drift + gust, 2-frame
+      tumble, land on water → ripple ring, land on rock → rest 20–60s.
+- [ ] Water sparkle dashes + occasional fish ripple.
+- [ ] Birds: rare flock, 2-frame flap, shallow arc, scale cue at far depth.
+- [ ] Lantern flame, irregular schedule.
+- [ ] **The hush**: `ambience_gain` 1.0 → 0.65 on dragon spawn, slow settle after.
+- [ ] **Ambient director**: 2–4 active systems, region-gated, deterministic,
+      crossfading at region boundaries.
+- [ ] **Ambience delta test**: `frame_delta / 129600` must sit in 0.30%–1.20%
+      per region with no dragon. Ship-blocking.
+- [ ] Region ambient identities (at minimum: one lush, one barren, one watery).
+
+**Exit criteria:** the ambience delta test passes in every region, *and* a
+five-minute dragon-free recording is worth watching. If it isn't, the answer is
+not more particles — it's stronger gusts, a waterfall in view more often, and
+better regional contrast (especially a genuinely empty cold-peaks region).
+
 ## Phase 3 — The Wallpaper Host (1–2 weeks)
 
 **Goal:** it's on the desktop, and it doesn't drain the battery.
 
+- [ ] **`dr_host` interface locked** and the null host building (should already
+      be true from Phase 0 — this is the check).
 - [ ] **Windowing spike first** (200 lines): desktop-level window, one screen,
       verify Spaces + Mission Control + full-screen behaviour. This is the
       risky bit; timebox it and learn early.
@@ -106,11 +141,27 @@ product doesn't work.
 - [ ] Remaining peak archetypes, remaining anchor objects.
 - [ ] Remaining 3 shots, plus `coil`.
 - [ ] Second weather state (Ink Wash — cheapest, most striking).
-- [ ] Onboarding: first-run shows the pavilion shot and one dragon within 20s.
-      (First impressions never get a second chance and the default 55s gap is
-      too long.)
-- [ ] WASM build + landing page.
+- [ ] **WASM host** — the second independent host. Build it here, not later; it
+      both proves the portability abstraction and doubles as the landing page.
+- [ ] Onboarding: first-run shows the pavilion shot and one dragon within 8s.
 - [ ] Licensing, price, DMG, update path.
+
+---
+
+## Phase 6 — Other platforms (post-v1, ~2 weeks total)
+
+Only after macOS works. Each is a new `platform/` directory plus a `dr_host`
+implementation; the core does not change. Order by value:
+
+- [ ] **Web/WASM** (likely already done in Phase 5) — demo + abstraction proof.
+- [ ] **Windows**: WorkerW behind desktop icons, tray, registry prefs.
+- [ ] **Linux X11**: `override-redirect` desktop window.
+- [ ] **Linux Wayland**: `wlr-layer-shell` where supported; honest fallback
+      (borderless always-behind) elsewhere. GNOME is the known hard case.
+
+Do this only if the concept is validated. Portability discipline from day one
+makes it two weeks of work; skipping the discipline makes it two months per
+platform. See `55-platform-portability.md`.
 
 ---
 

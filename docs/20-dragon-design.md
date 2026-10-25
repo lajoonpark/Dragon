@@ -174,9 +174,11 @@ very long time.
 
 - **Speed**: a traverse should take **35–70 seconds** to cross a 1920px screen.
   That's ~30–55 px/s at 1×. If you're not sure, slow it down.
-- **Gap between dragons**: weighted random, `mean ≈ 55s`, `min 20s`, `max 240s`.
-  Sometimes two follow each other within 15s (feels like a pair, magical).
-  Sometimes nothing for four minutes (makes you forget, so the next one lands).
+- **Gap between dragons**: weighted random, `mean ≈ 30s`, `min 12s`, `max 90s`.
+  Pairs overlapping ~8% of the time (two dragons sharing the range is lovely,
+  as long as their paths don't collide on screen). The world should feel
+  inhabited, not like a fish tank — see `35-ambient-life.md` for the pacing
+  rationale and the "hush" that keeps each dragon an event.
 - **Bank**: the body rolls slightly into turns — implemented as a 1px vertical
   shear of the cross-section bars, scaled by lateral acceleration. Cheap, huge.
 - **No bobbing.** Ever. Vertical oscillation is the #1 thing that makes a flight
