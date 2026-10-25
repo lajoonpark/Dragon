@@ -210,3 +210,64 @@ why it goes first.
 authored thing goes, what palette band it uses, and how mist eats its base. It
 may never decide what a mountain looks like. Six attempts is enough evidence
 that it cannot.
+
+---
+
+## Panel 01 — what the first real panel established
+
+`docs/panel-01-1x.png` (and `-2x`) is the first composed panel. Reviewed at 1×
+and 2×, because that is the only honest way to judge it.
+
+### The composition is a gorge, not a frontal range
+
+The reference is a tall portrait: a wall of spires, mist, water at the bottom.
+Copying it into 16:9 would have given a postcard. Instead:
+
+- **Two massifs cropped by the frame edges** (left cropped by top *and* left).
+  The range exceeds the frame vertically instead of politely fitting inside it
+  with sky above. This is how the portrait's verticality survives a wide frame.
+- **A notch right of centre** — pale, layered, near-empty. That void is the
+  dragon corridor and the brightest air in the frame. The reference has no room
+  for it; a wallpaper must have one, because something has to fly through.
+- **A waterfall** off the right crag. Not in the reference. A vertical event in a
+  horizontal frame, a scale anchor that makes the peaks legible, and permanent
+  gentle motion — the highest value-per-pixel element in the scene.
+- **One warm accent** (blossom, bottom-left) against an entirely cool image.
+- **Asymmetric foreground**: rocky at the left, open at the right.
+
+### Edge language, learned the hard way
+
+Three attempts at cliff edges, in order:
+
+1. **Per-row authored numbers** → 8–12px staircase steps. Reads as Minecraft.
+2. **Continuous noise on the edge** → a caterpillar. Reads as a snake.
+3. **Held runs + one jump** → correct. Rock holds an offset for 4–6 rows, then
+   steps. The eye reads "faceted cliff", not "wobbling line".
+
+The rule: *edges step in runs, never continuously*. Continuous variation is
+organic (worms, cloth); quantised runs are geological (rock, brick).
+
+Similarly, **facet edge lines must be broken into segments**. A 1px darker line
+running the full height of a plane becomes a serpentine contour that the eye
+follows like a river. Segments that start and stop read as folds. Same for rock
+strata: short authored ledges, never full-width scanlines.
+
+### Mist must pool, not band
+
+A mist band with a flat top edge is a scan bar. Mist is given:
+- a **per-column vertical offset**, so its ceiling undulates;
+- **local pooling at specific x-positions** near the base of crags, so it looks
+  like it settled where the rock is;
+- **no band across the waterline at all** — that produced a dotted line across
+  the entire frame. Low mist now exists only where there is rock to pool against.
+
+### What still needs work
+
+- The notch spires are still too uniform in spacing and all lean vertical. They
+  need clustering and two or three distinct archetypes, not one repeated.
+- The left massif's faceting is only three planes; it wants a fourth and a
+  shadow plane at the silhouette edge.
+- Perspective: the water reflection is a mirror. It should compress toward the
+  horizon and darken with distance.
+- No dragons yet. The notch is sized for them: roughly 170px of clear air
+  horizontally at the mouth, which comfortably takes a body 140px long.
