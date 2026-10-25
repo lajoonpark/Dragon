@@ -93,6 +93,31 @@ Nobody in the image. No people, no boats, no birds, no animals.
 
 ---
 
+## Short version — for models that truncate
+
+Midjourney clips at roughly 60 words, and some SDXL front-ends weight the first
+sentence heavily and ignore the rest. If the model cannot take the full prompt,
+use this instead — it keeps the clauses that actually change the output, in
+priority order. If forced to cut further, cut from the bottom.
+
+```
+Flat-colour Chinese shanshui karst landscape, 16:9. Warm cream light on
+upper-left rock faces, cool blue-grey shadow. Two enormous limestone massifs
+cropped by the left and right frame edges, rising past the top of the frame,
+framing a deep misty valley; a clear open corridor of bright mist right of
+centre. Six overlapping layers of thin vertical karst spires receding into
+lit cream mist, each layer paler than the last. Dark pine trees and a tiny
+pavilion in the near foreground, still dark water at the bottom. Flat colour
+planes, hard edges, no gradients, no brush texture, screen print. Empty.
+--ar 16:9
+```
+
+The three clauses that must survive any shortening: **massifs cropped by the
+frame edges** (verticality), **warm cream light on upper-left faces** (the
+warm/cool split), and **six layers each paler than the last** (depth).
+
+---
+
 ## Negative prompt
 
 If the model supports negative prompts, use these. If it does not, the phrases
