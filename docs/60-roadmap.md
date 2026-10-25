@@ -52,9 +52,17 @@ doesn't, the problem is the body rendering, and we find that out for cheap.
 dissolves into mist, and the path from "behind a far peak" to "in front of a
 near rock" is one continuous move with no popping.
 
-## Phase 2 — The World (2–3 weeks)
+## Phase 2 — The World (3 weeks) — the biggest block in the project
 
 **Goal:** a still frame worth framing. Then make it move.
+
+See `25-art-pipeline.md` for how. The short version: hand-author 10 karst
+silhouettes in Aseprite/ASCII, 8 overlay stamps, then compose with the tool.
+**Every pixel of the mountain is a decision; the tool never invents rock.**
+Six procedural attempts failed — that's now evidence, not opinion.
+
+Do not author a flat image. Author the layered stack, so the depth field comes
+free and the same art serves the still and the animation.
 
 - [ ] Peak archetype library (start with 6 of the 12).
 - [ ] 5 depth ramps + the palette audit test.

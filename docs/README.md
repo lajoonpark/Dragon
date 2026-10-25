@@ -7,6 +7,7 @@ Read in this order. Each doc stands alone, but they build.
 | 00 | [Vision](00-vision.md) | What is this, what does it feel like, what are we deliberately not making |
 | 10 | [Depth & Occlusion](10-depth-and-occlusion.md) | **The core mechanic.** How a dragon slips behind a mountain, and why not with layers |
 | 20 | [The Dragon](20-dragon-design.md) | Silhouette, proportion, the procedural body rig, palettes, and how it flies |
+| 25 | [Art Pipeline](25-art-pipeline.md) | **How the background gets made.** Why not SVG, six failed approaches, the archetype system |
 | 30 | [Scene & Composition](30-scene-composition.md) | The handscroll, depth stack, mountain archetypes, water, weather, shot list |
 | 35 | [Ambient Life](35-ambient-life.md) | **The other half.** Wind gusts, petals, waterfalls, birds, the hush, and the density budget |
 | 40 | [Dragon Timer](40-timer-app.md) | The companion app: why it exists, the alarm choreography, intensity = meaning |

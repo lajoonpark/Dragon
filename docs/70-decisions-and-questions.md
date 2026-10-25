@@ -176,6 +176,37 @@ math), and IPC (JSON lines through `bus_send`/`bus_poll`).
 **Why.** These four leaks are what actually make ports expensive. Named
 explicitly so we can refuse them at 1am.
 
+### D-019 — Silhouettes are hand-authored; the tool never invents rock
+**Decision.** Karst silhouettes are drawn by hand (Aseprite, stored as ASCII in
+git). Value planes are *declared* as row-width fractions. The compositor owns
+palette, dither, depth, mist, water, placement and animation — never shape.
+**Why.** Six procedural generators were built and all six failed, each
+differently: candles (taper formula), 3D-mesh noise, tombstones (values without
+facets), tablecloths (dither-as-fill), postage stamps (one archetype repeated).
+Only the hand-authored ASCII silhouette read as karst. Shape is a decision, and
+decisions resist automation.
+**Rejected.** Procedural generation (six attempts, no); SVG (anti-aliased by
+definition, wrong model — see `25-art-pipeline.md`).
+
+### D-020 — Variety via mirror + depth + authored overlays, not new silhouettes
+**Decision.** 10 hand-drawn archetypes × 2 mirrors × 3 depth/palette
+assignments × authored overlay stamps (ledges, cracks, tree bundles) to fill a
+7680px world with 50–70 distinct-looking peaks.
+**Why.** Hand-painting 60 unique mountains is weeks; hand-painting 10 is a
+weekend. Overlays are the underrated piece — a 16×24 "ledge with three pines"
+stamp at different heights makes a peak read as a different location. Free
+rotation is banned; it destroys the pixel grid.
+**Rejected.** One archetype scaled and repeated (v5 — legible as wallpaper
+within seconds).
+
+### D-021 — Dither is a transition, never a fill
+**Decision.** `dith()` writes nothing below alpha 0.12 and writes solid above
+0.78. Only the band between is actually dithered.
+**Why.** v4 used dither as a fill and produced checkerboard fields that ate the
+entire image. This is a one-line rule that cost a full iteration to learn.
+**Rejected.** Unconditional `bayer < alpha` writes (looked correct in isolation,
+destroyed the composition).
+
 ---
 
 ## Open questions
