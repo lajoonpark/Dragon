@@ -1,0 +1,22 @@
+# Dragon ambient emitters c01 - measured by tools/pipeline/export_emitters.py
+# box <name> <x0> <y0> <x1> <y1>   (world coords in the 480x270 panel)
+# Attach points come from the art, not from taste: change the art, re-run.
+
+# Where falling water actually is. Animation is clipped to the mask.
+box waterfall_a 374 103 396 181
+box waterfall_b 416 118 425 190
+
+# The blossom cluster: petals spawn here and enter the frame from off it.
+box blossom 2 188 62 252
+
+# Reeds stand on the bottom-left foreground rock, along its crest.
+box reed_shelf 0 151 139 266
+
+# Water plane: dash rows, sparkles, ripples. Mirror starts at y=239.
+box water 0 239 480 270
+
+# The corridor: the brightest clear air, where a dragon would be legible.
+box corridor 265 40 357 200
+
+# The pavilion. Unused in v1 (no lantern system yet) but recorded.
+box pavilion 198 146 214 164

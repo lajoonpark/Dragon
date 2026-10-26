@@ -1,0 +1,175 @@
+"""Export the reduced master panel into plain-text, diffable assets.
+
+    python3 tools/pipeline/export_assets.py
+
+Writes:
+    assets/palette_c01.txt   named ramps, dark -> light, one colour per line
+    assets/panel_c01.txt     one base36 char per pixel (index into the palette)
+    assets/depth_c01.txt     one base16 char per pixel (0 = far, f = near)
+
+Plain text is the source of truth, not a PNG (docs/50, docs/55): an art change
+must show up in `git diff` as pixels that moved, and a binary blob cannot do
+that. The build embeds these files into the core (tools/embed_assets.py).
+
+The depth field is the auto field from tools/pipeline/author_depth.py, with its
+documented limitation intact: depth is per connected rock mass, so each of the
+two framing massifs gets one depth for its whole extent. That is a starting
+point, not the final asset (docs/reviews/c01-depth-test.md).
+"""
+
+import sys
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+PANEL = Path("docs/review/c01-reduced-1x.png")
+OUT = Path("assets")
+
+B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+B16 = "0123456789abcdef"
+
+# Per-mass depth brackets from author_depth.py. Kept in sync by hand; the
+# parity check at the bottom of this file fails if they drift.
+ROCK_BANDS = [(0, 0.84), (95, 0.72), (118, 0.60), (145, 0.47),
+              (160, 0.36), (172, 0.24)]
+WATER_DEPTH, SKY_DEPTH, MIST_DEPTH = 0.96, 0.03, 0.15
+
+
+def lum(im):
+    return im.astype(np.int16) @ np.array([299, 587, 114]) // 1000
+
+
+def label(mask):
+    """4-connected component labelling, iterative, no scipy dependency."""
+    h, w = mask.shape
+    lab = np.zeros((h, w), np.int32)
+    n = 0
+    stack = []
+    for sy in range(h):
+        for sx in range(w):
+            if not mask[sy, sx] or lab[sy, sx]:
+                continue
+            n += 1
+            lab[sy, sx] = n
+            stack.append((sy, sx))
+            while stack:
+                y, x = stack.pop()
+                for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    ny, nx = y + dy, x + dx
+                    if 0 <= ny < h and 0 <= nx < w and mask[ny, nx] and not lab[ny, nx]:
+                        lab[ny, nx] = n
+                        stack.append((ny, nx))
+    return lab, n
+
+
+def binary_open(mask, k=2):
+    """Erode then dilate by a k x k square, on the boolean mask."""
+    m = mask.copy()
+    for _ in range(k - 1):
+        m = m & np.roll(m, 1, 0) & np.roll(m, -1, 0) & np.roll(m, 1, 1) & np.roll(m, -1, 1)
+    for _ in range(k - 1):
+        m = m | np.roll(m, 1, 0) | np.roll(m, -1, 0) | np.roll(m, 1, 1) | np.roll(m, -1, 1)
+    return m
+
+
+def build_depth(rgb):
+    h, w, _ = rgb.shape
+    L = lum(rgb)
+    rock = binary_open(L <= 195, 2)
+    lab, n = label(rock)
+    sizes = np.bincount(lab.ravel())
+    suml = np.bincount(lab.ravel(), weights=L.ravel())
+    depth = np.full((h, w), MIST_DEPTH, np.float32)
+
+    for c in range(1, n + 1):
+        if sizes[c] < 40:
+            continue
+        m = lab == c
+        mean = suml[c] / sizes[c]
+        d = ROCK_BANDS[-1][1]
+        for floor, val in ROCK_BANDS:
+            if mean >= floor:
+                d = val
+        depth[m] = d
+
+    pale = L > 200
+    for x in range(w):
+        col = np.where(~pale[:, x])[0]
+        if len(col):
+            depth[: col[0], x] = SKY_DEPTH
+
+    water_top = h
+    for y in range(h):
+        if y > h * 0.6 and pale[y].mean() > 0.45:
+            water_top = y
+            break
+    water = np.zeros((h, w), bool)
+    water[water_top:, :] = pale[water_top:, :]
+    depth[water] = WATER_DEPTH
+    return depth, n, water_top
+
+
+def order_palette(cols):
+    """Two ramps, each sorted dark -> light. Cool = blue-dominant, warm = red.
+
+    The palette converged to 17 cool + 7 warm steps (docs/reviews/c01-reduction.md).
+    Sorting them into a ramp is what makes it usable by the renderer, and what
+    lets a test assert that a pixel is a *step* rather than an ad-hoc colour.
+    """
+    L = [(int(c[0]) * 299 + int(c[1]) * 587 + int(c[2]) * 114) // 1000 for c in cols]
+    cool = [i for i, c in enumerate(cols) if int(c[2]) >= int(c[0])]
+    warm = [i for i, c in enumerate(cols) if int(c[2]) < int(c[0])]
+    cool.sort(key=lambda i: L[i])
+    warm.sort(key=lambda i: L[i])
+    return cool, warm, L
+
+
+def main():
+    rgb = np.array(Image.open(PANEL).convert("RGB"))
+    h, w, _ = rgb.shape
+    assert (w, h) == (480, 270), f"panel must be 480x270, got {w}x{h}"
+
+    flat = rgb.reshape(-1, 3)
+    cols, inverse = np.unique(flat, axis=0, return_inverse=True)
+    if len(cols) > len(B36):
+        raise SystemExit(f"{len(cols)} colours does not fit base36 indices")
+    if len(cols) > 36:
+        raise SystemExit("palette too large for one char per pixel")
+
+    cool, warm, L = order_palette(cols)
+    order = cool + warm
+    remap = np.zeros(len(cols), np.uint8)
+    for new, old in enumerate(order):
+        remap[old] = new
+    grid = remap[inverse].reshape(h, w)
+
+    OUT.mkdir(exist_ok=True)
+    lines = ["# Dragon palette c01 - generated by tools/pipeline/export_assets.py",
+             "# <ramp> <step> <#rrggbb>   index = line order (base36 in panel_c01.txt)",
+             "# 17 cool steps + 7 warm steps, each sorted dark -> light."]
+    for ramp, idxs in (("cool", cool), ("warm", warm)):
+        for step, old in enumerate(idxs):
+            c = cols[old]
+            lines.append(f"{ramp} {step} #{c[0]:02x}{c[1]:02x}{c[2]:02x}")
+    (OUT / "palette_c01.txt").write_text("\n".join(lines) + "\n")
+
+    (OUT / "panel_c01.txt").write_text(
+        "\n".join("".join(B36[v] for v in row) for row in grid) + "\n")
+
+    depth, n, water_top = build_depth(rgb)
+    q = np.clip(np.round(depth * 15), 0, 15).astype(np.uint8)
+    (OUT / "depth_c01.txt").write_text(
+        "\n".join("".join(B16[v] for v in row) for row in q) + "\n")
+
+    levels, counts = np.unique(q, return_counts=True)
+    print(f"panel   {w}x{h}  {len(cols)} colours -> {len(cool)} cool + {len(warm)} warm")
+    print(f"depth   {n} masses, water top y={water_top}")
+    for v, c in zip(levels, counts):
+        print(f"  {v:2d}  depth {v/15:4.2f}  {c*100/(h*w):5.1f}%")
+    print(f"wrote {OUT}/palette_c01.txt {OUT}/panel_c01.txt {OUT}/depth_c01.txt")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

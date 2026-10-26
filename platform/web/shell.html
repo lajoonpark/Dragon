@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dragon Timer</title>
+<style>
+  /* The chrome is deliberately near-invisible: docs/40 asks for "a minimal timer
+   * readout in the corner... small, no boxes" and docs/00 for furniture that
+   * disappears. Everything here is a hairline and a word. The painting is the
+   * product; this is the frame around it. */
+  :root {
+    --paper: #fdf5e1;
+    --ink: #141923;
+    --mist: #d1dbe0;
+    --slate: #35475c;
+    --dim: #6d7d90;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #0c0f14;
+    color: var(--mist);
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    overflow: hidden;
+  }
+  #stage { position: fixed; inset: 0; display: grid; place-items: center;
+           background: radial-gradient(circle at 50% 45%, #171d26 0%, #0a0c11 70%); }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: var(--paper);
+    box-shadow: 0 0 0 1px #2a333f, 0 24px 80px -20px #000;
+    transition: box-shadow .6s ease;
+  }
+  body.alarm canvas { box-shadow: 0 0 0 1px #4a5a6e, 0 30px 90px -20px #000; }
+
+  /* ---- set-a-timer, the only real UI ---------------------------------- */
+  /* docs/40: "Setting the timer must be possible in under 3 seconds: type 25 +
+   * Enter." So the input takes bare numbers, clock time, or a preset word. */
+  #setter {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    transition: opacity .45s ease, transform .45s ease;
+  }
+  #setter.hide { opacity: 0; transform: translateX(-50%) translateY(10px); pointer-events: none; }
+
+  #num {
+    font: inherit; font-size: 15px; letter-spacing: .12em;
+    color: var(--paper);
+    background: transparent;
+    border: 0; border-bottom: 1px solid #3b4856;
+    padding: 5px 2px 6px;
+    width: 110px; text-align: center;
+    outline: none;
+    transition: border-color .3s ease;
+  }
+  #num::placeholder { color: #4a5768; letter-spacing: .06em; font-size: 13px; }
+  #num:focus { border-bottom-color: #8b9dae; }
+
+  #label {
+    font: inherit; font-size: 13px;
+    color: var(--paper);
+    background: transparent;
+    border: 0; border-bottom: 1px solid #2f3a48;
+    padding: 5px 2px 6px;
+    width: 190px;
+    outline: none;
+  }
+  #label::placeholder { color: #46525f; }
+  #label:focus { border-bottom-color: #6d7d90; }
+
+  #go {
+    font: inherit; font-size: 12px; letter-spacing: .1em;
+    color: var(--paper);
+    background: transparent;
+    border: 1px solid #46525f;
+    border-radius: 2px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  #go:hover { background: #22303c; border-color: #8b9dae; }
+
+  #presets { position: fixed; left: 50%; bottom: 74px; transform: translateX(-50%);
+             display: flex; gap: 6px; transition: opacity .45s ease; }
+  #presets.hide { opacity: 0; pointer-events: none; }
+  .chip {
+    font: inherit; font-size: 11px; letter-spacing: .06em;
+    color: #8494a6;
+    background: transparent; border: 0;
+    padding: 4px 8px; cursor: pointer; border-radius: 2px;
+  }
+  .chip:hover { color: var(--paper); background: #1e2833; }
+
+  /* ---- running chrome -------------------------------------------------- */
+  #running { position: fixed; left: 26px; bottom: 24px;
+             display: flex; align-items: baseline; gap: 14px;
+             opacity: 0; pointer-events: none; transition: opacity .5s ease; }
+  #running.show { opacity: 1; pointer-events: auto; }
+  #running .what { color: #8b9dae; font-size: 12px; letter-spacing: .06em; max-width: 320px;
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stop, #mute {
+    font: inherit; font-size: 11px; letter-spacing: .08em;
+    color: #7f90a6; background: transparent; border: 0;
+    cursor: pointer; padding: 2px 4px;
+  }
+  #stop:hover, #mute:hover { color: var(--paper); }
+
+  /* ---- notification fallback: docs/40 requires a missed window to still
+     alert, so the canvas label is never the only signal ------------------- */
+  #toast {
+    position: fixed; left: 50%; top: 22px; transform: translateX(-50%) translateY(-8px);
+    font-size: 12px; letter-spacing: .06em; color: #1b232e;
+    background: var(--paper); border-radius: 2px; padding: 7px 13px;
+    opacity: 0; pointer-events: none; transition: opacity .4s ease, transform .4s ease;
+    box-shadow: 0 8px 30px -10px #000;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---- dev drawer, closed by default ----------------------------------- */
+  #dev { position: fixed; right: 14px; bottom: 14px; font-size: 10px;
+         color: #2f3a48; letter-spacing: .1em; text-transform: uppercase; }
+  #dev button { font: inherit; background: transparent; border: 0; color: inherit;
+                cursor: pointer; padding: 2px 4px; letter-spacing: inherit; }
+  #dev button:hover { color: #7f90a6; }
+  #devpanel { position: fixed; right: 14px; bottom: 38px;
+              background: rgba(10,14,19,.92); border: 1px solid #232d3a;
+              border-radius: 3px; padding: 9px 11px; display: none;
+              flex-direction: column; gap: 7px; font-size: 10px; color: #6d7d90; }
+  #devpanel.open { display: flex; }
+  #devpanel .row { display: flex; gap: 5px; align-items: center; }
+  #devpanel button { font: inherit; font-size: 10px; color: var(--mist);
+                     background: #1b232e; border: 1px solid #2f3a48;
+                     border-radius: 2px; padding: 3px 7px; cursor: pointer; }
+  #devpanel button[aria-pressed="true"] { background: #35475c; border-color: #576d84; }
+  #stat { color: #46525f; font-size: 9px; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c" width="480" height="270"></canvas></div>
+
+<div id="presets">
+  <button class="chip" data-min="25" data-kind="0">focus 25</button>
+  <button class="chip" data-min="5"  data-kind="1">break 5</button>
+  <button class="chip" data-min="3"  data-kind="1">tea 3</button>
+  <button class="chip" data-min="90" data-kind="0">deep 90</button>
+</div>
+
+<div id="setter">
+  <input id="num" type="text" inputmode="numeric" placeholder="25" autocomplete="off" spellcheck="false">
+  <input id="label" type="text" placeholder="name it (optional)" autocomplete="off" spellcheck="false" maxlength="40">
+  <button id="go">start</button>
+</div>
+
+<div id="running">
+  <span class="what" id="what"></span>
+  <button id="mute">sound on</button>
+  <button id="stop">stop</button>
+</div>
+
+<div id="toast"></div>
+
+<div id="dev"><button id="devtoggle">dev</button></div>
+<div id="devpanel">
+  <div class="row">
+    <button data-view="0" aria-pressed="true">scene</button>
+    <button data-view="1" aria-pressed="false">depth</button>
+    <button data-view="2" aria-pressed="false">emitters</button>
+    <button data-view="3" aria-pressed="false">life</button>
+  </div>
+  <div class="row">
+    <button id="devpan" aria-pressed="false">pause pan</button>
+    <button id="devscale">fit</button>
+  </div>
+  <div class="row">
+    <button id="devAlarm">preview alarm</button>
+  </div>
+  <div class="row"><span id="stat"></span></div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+ctx.imageSmoothingEnabled = false;
+const img = ctx.createImageData(480, 270);
+
+const el = (id) => document.getElementById(id);
+const numEl = el('num'), labelEl = el('label');
+
+let frameNo = 0;
+let view = 0;
+let fitMode = true;
+let last = 0, acc = 0;
+const FRAME_MS = 1000 / 15;
+let fpsWin = [];
+let lastState = -1;
+
+/* ---- scale ------------------------------------------------------------- */
+function fit() {
+  const pad = 56;
+  const aw = innerWidth - pad, ah = innerHeight - pad;
+  const s = Math.max(1, Math.floor(Math.min(aw / 480, ah / 270)));
+  canvas.style.width = (480 * s) + 'px';
+  canvas.style.height = (270 * s) + 'px';
+  canvas.dataset.scale = s;
+}
+addEventListener('resize', () => { if (fitMode) fit(); });
+
+/* ---- parsing: "25", "25m", "1:30", "90s", "tea" ------------------------ */
+/* docs/40 specifies a stone dial as well. The dial is a documented follow-up
+ * rather than a prototype omission: for every value except one, typing is
+ * faster, and the doc's own bar is "type 25 + Enter" in under 3 seconds. */
+const WORDS = { tea: 3, break: 5, focus: 25, deep: 90, nap: 20, stretch: 2 };
+function parseDuration(raw) {
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return 25 * 60;
+  if (WORDS[s]) return WORDS[s] * 60;
+  const clock = s.match(/^(\d+):([0-5]?\d)$/);
+  if (clock) return (+clock[1]) * 60 + (+clock[2]);
+  const unit = s.match(/^(\d+(?:\.\d+)?)\s*(h|hr|hour|hours|m|min|mins|minute|minutes|s|sec|secs|seconds)?$/);
+  if (!unit) return null;
+  const v = parseFloat(unit[1]);
+  const u = unit[2] || 'm';               /* a bare number means minutes */
+  if (u[0] === 'h') return v * 3600;
+  if (u[0] === 's') return v;
+  return v * 60;
+}
+
+/* ---- timer control ----------------------------------------------------- */
+function startTimer(seconds, kind) {
+  if (!(seconds > 0) || seconds > 12 * 3600) return;
+  const label = labelEl.value.trim();
+  Module._dragon_timer_begin(Module.world, seconds, label || '', kind | 0);
+  numEl.blur(); labelEl.blur();
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+  ensureAudio();   /* a user gesture is required before the chime can play */
+}
+
+function startFromInput(kind) {
+  const secs = parseDuration(numEl.value || numEl.placeholder);
+  if (secs === null || secs <= 0) {
+    numEl.value = '';
+    numEl.placeholder = 'try 25 or 1:30';
+    return;
+  }
+  startTimer(secs, kind === undefined ? 0 : kind);
+}
+
+el('go').onclick = () => startFromInput(0);
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.onclick = () => {
+    numEl.value = chip.dataset.min;
+    startTimer((+chip.dataset.min) * 60, +chip.dataset.kind);
+  };
+});
+
+/* Enter starts, Escape cancels, "/" jumps to the input from anywhere. Single
+ * keystrokes, because the product's claim about input is "under 3 seconds". */
+addEventListener('keydown', (e) => {
+  const typing = document.activeElement === numEl || document.activeElement === labelEl;
+  if (e.key === 'Enter' && (typing || document.activeElement === document.body)) {
+    e.preventDefault();
+    startFromInput(0);
+  } else if (e.key === 'Escape') {
+    if (Module.world && Module._dragon_timer_st(Module.world) !== 0) {
+      Module._dragon_timer_cancel(Module.world);
+    } else {
+      numEl.value = ''; labelEl.value = '';
+    }
+  } else if (e.key === '/' && !typing) {
+    e.preventDefault(); numEl.focus(); numEl.select();
+  }
+});
+
+el('stop').onclick = () => { if (Module.world) Module._dragon_timer_cancel(Module.world); };
+
+/* ---- audio: one stone chime, nothing else (docs/40) -------------------- */
+/* "No beeps. A low stone chime (one struck note, long decay) at t=0.6s, when
+ * the dragon arrives. It should sound like the landscape, not like a UI."
+ *
+ * Synthesised rather than shipped as a sample, so the web host stays a single
+ * file with nothing to load. Detuned partials plus a short bandpassed noise
+ * transient read as struck stone; a bare sine reads as a beep, which is the one
+ * thing the doc rules out. */
+const audio = { ctx: null };
+function ensureAudio() {
+  if (!audio.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audio.ctx = new AC();
+  }
+  if (audio.ctx.state === 'suspended') audio.ctx.resume();
+  return audio.ctx;
+}
+function stoneChime() {
+  const ac = ensureAudio();
+  if (!ac) return;
+  const t0 = ac.currentTime;
+  const out = ac.createGain();
+  out.gain.value = 1;
+  out.connect(ac.destination);
+
+  const partials = [[174.6, 0.5, 5.5], [261.6, 0.2, 4.0], [349.2, 0.09, 2.6]];
+  partials.forEach(([f, g, decay]) => {
+    const o = ac.createOscillator();
+    const gg = ac.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    gg.gain.setValueAtTime(0.0001, t0);
+    gg.gain.linearRampToValueAtTime(g, t0 + 0.012);
+    gg.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    o.connect(gg); gg.connect(out);
+    o.start(t0); o.stop(t0 + decay + 0.1);
+  });
+
+  /* the strike: very short filtered noise, not a click */
+  const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.05), ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  const n = ac.createBufferSource(); n.buffer = buf;
+  const bp = ac.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 0.9;
+  const ng = ac.createGain(); ng.gain.value = 0.15;
+  n.connect(bp); bp.connect(ng); ng.connect(out);
+  n.start(t0);
+}
+
+/* ---- per-frame UI sync ------------------------------------------------- */
+function syncUI() {
+  if (!Module.world) return;
+  const st = Module._dragon_timer_st(Module.world);
+  const left = Module._dragon_timer_left(Module.world);
+
+  if (st === 2 && lastState !== 2) {
+    document.body.classList.add('alarm');
+    stoneChime();
+    notify();
+  }
+  if (st !== 2 && lastState === 2) document.body.classList.remove('alarm');
+  lastState = st;
+
+  const showing = st !== 0;
+  el('setter').classList.toggle('hide', showing);
+  el('presets').classList.toggle('hide', showing);
+  el('running').classList.toggle('show', st === 1);
+
+  if (st === 1) {
+    const total = Math.max(0, Math.round(left));
+    const mm = String(Math.floor(total / 60)).padStart(2, '0');
+    const ss = String(total % 60).padStart(2, '0');
+    const name = labelEl.value.trim();
+    el('what').textContent = name ? `${mm}:${ss}  ·  ${name}` : `${mm}:${ss}`;
+  }
+}
+
+/* The canvas already carries the label, but docs/40 is explicit that an occluded
+ * window must still alert. */
+function notify() {
+  const name = labelEl.value.trim();
+  const msg = name || 'Timer finished';
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 5200);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try { new Notification('Dragon Timer', { body: msg, silent: true }); } catch (_) {}
+  }
+}
+
+/* ---- dev drawer -------------------------------------------------------- */
+el('devtoggle').onclick = (e) => {
+  const p = el('devpanel');
+  p.classList.toggle('open');
+  e.currentTarget.style.color = p.classList.contains('open') ? '#7f90a6' : '';
+};
+document.querySelectorAll('#devpanel [data-view]').forEach(b => {
+  b.onclick = () => {
+    view = +b.dataset.view;
+    document.querySelectorAll('#devpanel [data-view]').forEach(x =>
+      x.setAttribute('aria-pressed', String(+x.dataset.view === view)));
+  };
+});
+el('devpan').onclick = (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+  Module._dragon_set_pan_paused(Module.world, on ? 1 : 0);
+};
+el('devAlarm').onclick = () => {
+  const name = labelEl.value.trim() || 'Tea is ready';
+  labelEl.value = name;
+  Module._dragon_timer_begin(Module.world, 0.1, name, 0);
+  ensureAudio();
+};
+el('devscale').onclick = (e) => {
+  fitMode = !fitMode;
+  if (fitMode) { fit(); e.currentTarget.textContent = 'fit'; }
+  else {
+    const s = (canvas.dataset.scale | 0) >= 2 ? 1 : 2;
+    canvas.style.width = (480 * s) + 'px';
+    canvas.style.height = (270 * s) + 'px';
+    canvas.dataset.scale = s;
+    e.currentTarget.textContent = s + '×';
+  }
+};
+
+/* ---- main loop --------------------------------------------------------- */
+function loop(now) {
+  if (!last) last = now;
+  acc += now - last;
+  last = now;
+  if (acc > 250) acc = 250;      /* never replay a backlog after a tab wake */
+  while (acc >= FRAME_MS) {
+    Module._dragon_step(Module.world, 1 / 15);
+    acc -= FRAME_MS;
+    frameNo++;
+  }
+
+  Module._dragon_set_view(Module.world, view);
+  const ptr = Module._dragon_frame_ptr(Module.world);
+  img.data.set(Module.HEAPU8.subarray(ptr, ptr + 480 * 270 * 4));
+  ctx.putImageData(img, 0, 0);
+
+  syncUI();
+
+  fpsWin.push(now);
+  while (fpsWin.length && now - fpsWin[0] > 1000) fpsWin.shift();
+  if (el('devpanel').classList.contains('open')) {
+    const st = Module._dragon_timer_st(Module.world);
+    const ph = Module._dragon_timer_ph(Module.world);
+    el('stat').textContent =
+      `${fpsWin.length} fps · ${canvas.dataset.scale | 0}× · ` +
+      `${(frameNo / 15).toFixed(0)}s · st${st} ph${ph}`;
+  }
+  requestAnimationFrame(loop);
+}
+
+var Module = {
+  onRuntimeInitialized() {
+    Module.world = Module._dragon_boot(0x5EED0D1A);
+    Module._dragon_set_view(Module.world, view);
+    fit();
+    numEl.focus();
+    requestAnimationFrame(loop);
+    bootParams();
+  }
+};
+
+/* ---- the handoff entry point (docs/40, "The handoff to the wallpaper") ---
+ * docs/40 says the alarm should be performable by another process: "the app
+ * sends the event, the wallpaper performs it." In the web build the URL is the
+ * IPC, so ?timer=5&name=Bread%20is%20done performs an alarm without any UI. The
+ * same parameters let the prototype be checked frame-by-frame at a known phase,
+ * which is otherwise guesswork against a 9-second window. */
+function bootParams() {
+  const q = new URLSearchParams(location.search);
+  const t = q.get('timer') ?? q.get('alarm');
+  if (t === null) return;
+  const secs = parseDuration(t);
+  if (!secs || secs <= 0) return;
+  const name = q.get('name') || q.get('label') || '';
+  labelEl.value = name;
+  const kind = parseInt(q.get('kind') || '0', 10);
+  Module._dragon_timer_begin(Module.world, secs, name, isNaN(kind) ? 0 : kind);
+}
+</script>
+<script src="dragon.js"></script>
+</body>
+</html>

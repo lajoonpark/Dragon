@@ -348,3 +348,21 @@ Kept honest on purpose:
 - **The `dr_host` abstraction may be slightly wrong on first contact with
   Windows.** Expect one interface change at the first port; that's cheap and
   expected. Two or three would mean the abstraction is bad, not unlucky.
+
+### D-027 — Ambience lives in world space, and settled petals must not own the pool
+**Decision.** Every ambient object stores a **world** x, never a screen x, and
+converts at draw time. Petals, reeds, sparkles and the waterfall all sample
+`gust()` and the depth/luma masks at their world position. Separately, the petal
+pool evicts the settled petal closest to vanishing rather than refusing to spawn.
+**Why.** Two measured bugs, both invisible in a still:
+1. Elements drawn at a fixed screen x slid across the cliffs while the camera
+   panned. After world-anchoring, per-region activity became uniform
+   (0.43–0.45%), which is the signature of the fix: before it, activity tracked
+   how much *art* was under each element instead of how much *life* there was.
+2. docs/35 asks for 30–70 concurrent petals **and** wants landed petals to lie
+   for 20–60 s. Those two requirements fight over one 72-slot pool: settled
+   petals filled all 72 slots within a minute and the airborne count collapsed
+   to a mean of 0.8. Evicting the oldest settled petal restored 36–55 airborne,
+   and `test_petals` now pins it.
+**Rejected.** A separate static "litter" array — it would double the bookkeeping
+to preserve a detail nobody can see (a petal that was about to vanish anyway).
