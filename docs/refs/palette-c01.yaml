@@ -1,0 +1,28 @@
+# Dragon - locked palette, extracted from master-candidate-01
+# Per-block mode reduction at 24 colours. Not hand-picked: these are the
+# colours the image actually converged to. Quantise all future art to this.
+palette:
+  - id00  #d1dbe0  rgb(209,219,224)   6.53%
+  - id01  #141923  rgb( 20, 25, 35)   6.45%
+  - id02  #7a8fa2  rgb(122,143,162)   5.79%
+  - id03  #acb8c1  rgb(172,184,193)   5.72%
+  - id04  #576d84  rgb( 87,109,132)   5.57%
+  - id05  #bdc8d0  rgb(189,200,208)   5.31%
+  - id06  #fdf5e1  rgb(253,245,225)   4.76%
+  - id07  #35475c  rgb( 53, 71, 92)   4.73%
+  - id08  #e1e6e5  rgb(225,230,229)   4.43%
+  - id09  #e2dccd  rgb(226,220,205)   4.24%
+  - id10  #4c6279  rgb( 76, 98,121)   4.19%
+  - id11  #41566c  rgb( 65, 86,108)   4.05%
+  - id12  #dde5e6  rgb(221,229,230)   4.01%
+  - id13  #fbf3de  rgb(251,243,222)   3.96%
+  - id14  #5f758b  rgb( 95,117,139)   3.88%
+  - id15  #52667c  rgb( 82,102,124)   3.77%
+  - id16  #9aa7b3  rgb(154,167,179)   3.52%
+  - id17  #d4d0c6  rgb(212,208,198)   3.18%
+  - id18  #f8efdd  rgb(248,239,221)   3.06%
+  - id19  #9298a5  rgb(146,152,165)   3.03%
+  - id20  #6a8198  rgb(106,129,152)   2.90%
+  - id21  #eeece1  rgb(238,236,225)   2.73%
+  - id22  #eae6d8  rgb(234,230,216)   2.48%
+  - id23  #273343  rgb( 39, 51, 67)   1.72%

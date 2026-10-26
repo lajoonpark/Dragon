@@ -202,6 +202,37 @@ it above the mist top.** A gate that can only pass is not a gate.
 
 ---
 
+## First result: it works (master-candidate-01)
+
+The first real candidate reduced cleanly. Full report in
+`docs/reviews/c01-reduction.md`; the two findings that change this document:
+
+**1. Step order is load-bearing.** Quantise to the palette **at full
+resolution first**, then mode-filter the palette indices. A mode filter on the
+raw image is meaningless — with ~87k unique colours, every pixel in a block is a
+unique colour and the mode is a coin flip. Quantising first turns it into a real
+majority vote. Averaging, as originally described above, would invent colours in
+neither the source nor the palette. **This corrects step 2/3 ordering.**
+
+**2. Crop to an exact integer factor, then reduce.** The source was 1536×864,
+which is ÷3.2 to 480×270 — not integer, so a resize resamples unevenly.
+Cropping to 1440×810 gives exact ÷3 *and* exact ×4 at 1080p. Always find the
+integer crop rather than accepting a fractional scale.
+
+**3. 24 colours, not 32.** More colours made it worse: banding roughly doubles
+from 16→32 as extra intermediate steps resolve the model's smooth gradients into
+terraces. 24 is the knee.
+
+### Gate design flaw found
+
+The seam and banding gates **cannot be decided by threshold.** A karst fissure, a
+waterfall ribbon, a horizon, and a real barcode all produce identical numbers.
+Trying to arbitrate that with a constant is what wasted rounds during the
+procedural phase. The audit therefore splits into **automatic** (palette
+adherence, flat field, warm presence — objectively decidable) and **needs eyes**
+(seam, banding — reported with coordinates for a human to zoom). See the table
+below: treat rows 3 and 4 as *pointers*, not verdicts.
+
 ## Acceptance checklist (run on the reduced, polished master)
 
 Adapted from the existing layer review gates. These are now tests for
