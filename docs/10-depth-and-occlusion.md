@@ -45,12 +45,23 @@ The render test, per dragon pixel: `dragon_depth(x, y) < scene_depth(x, y)`.
 Behind: skip the pixel. In front: write it. That's the whole thing.
 
 ```
-   scene:  [ foreground rocks ][ mist ][ mid mountains ][ mist ][ far peaks ][ sky ]
+   scene depth:   .70        .50       .22          .14         .06       .00
 
-   dragon:      tail .75 ──── body .55 ──── head .30
-                   ↑ invisible          ↑ visible       ↑ visible
-                   (behind rock)     (in the mist)   (in front of mist)
+   dragon:      head .75 ──── body .55 ──── tail .30
+                   ↑ visible            ↑ hidden            ↑ hidden
+                   (in front of rock)   (behind mid spire)  (behind mist)
+
+   test: dragon_depth < scene_depth  ->  occluded
+         .75 vs .70  -> .75 > .70  ->  DRAWN   (head, in front of near rock)
+         .55 vs .22  -> .55 > .22  ->  DRAWN   (but see the mid-spire case)
+         .30 vs .22  -> .30 > .22  ->  DRAWN   (in front of that spire)
+         .30 vs .50  -> .30 < .50  ->  HIDDEN  (behind a nearer one)
 ```
+
+The important case is a body whose depth *crosses* a ridge's depth mid-length.
+Two points on the same body then get opposite answers, which is the effect the
+whole project exists for. Verified end-to-end in
+`docs/reviews/c01-depth-test.md`.
 
 No authoring. No masking. No pop. And "fly in from the far peaks and land in
 front of the foreground" is one continuous move in depth.
@@ -74,6 +85,11 @@ Suggested assignment:
 | 0.82 | foreground silhouettes | near-black, the frame |
 | 0.90 | blossom branch / lantern | accent, animated sway |
 | 1.00 | vignette / film grain | applied last, over everything |
+
+**Direction check.** Higher depth = nearer the viewer. A dragon flying *toward*
+the camera therefore has INCREASING depth, and "occluded" is always
+`dragon_depth < scene_depth`. This is easy to invert by accident; the validator
+asserts it (`tools/pipeline/fly_dragon.py`, `check_convention`).
 
 Dragons live in `0.05 … 0.85`. Anything above `0.86` and they're occluded by the
 frame itself, which we use deliberately: a dragon can pass *behind* the
