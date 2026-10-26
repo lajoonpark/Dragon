@@ -251,6 +251,44 @@ match, and the mismatch appears exactly where the eye is, at the silhouette).
 Cutting first and inpainting after (works, but you are guessing at content you
 could have generated deliberately).
 
+### D-026 — No layer split. Rigid pan, with mist as the only independently moving element
+
+**Decision.** The scene pans as ONE rigid plane. Depth parallax is faked by
+drifting a soft mist veil at a different rate (2–3 px/s vs the 7 px/s pan). There
+are no background layers, no backing plates, and no per-band displacement.
+
+**Why.** Measured, on the real reduced master at the documented 7 px/s:
+
+| Approach | Result |
+|---|---|
+| Stack bands, shift each | **Tears.** Opens holes at every depth boundary — the hole problem (D-024) again, in motion. |
+| Inverse-warp per depth | **No holes by construction**, but smears: 1.1% of pixels past 1.5× stretch at 24s (span 0.15), 11.2% at span 0.85. Worse still, it degrades *linearly with time*, and a wallpaper runs for hours. |
+| **Rigid pan** | Undistorted forever. 0.0% smeared, by definition. |
+| Rigid + drifting mist | Mist holds; contrast 67.9 vs 67.3, 88% high-frequency detail retained. |
+
+The smear is not a bug in the warp — it is information-theoretic. Parallax
+reveals what is *behind* things, and a flat image has nothing behind things. Any
+method that asks for that content must invent it by stretching.
+
+**Key distinction that makes mist different:** structure is what smears. Mist has
+no structure, so it can be displaced independently without the eye seeing a shape
+change. It is the only element that gets this for free.
+
+**Consequence — this retires the layer-split task entirely.** Combined with D-024
+(the depth field means nothing is ever removed, so nothing can be uncovered),
+there is no remaining reason to split the background. The project no longer has
+a hole problem.
+
+**What we give up.** A dragon cannot pass *behind* a near massif while the massif
+slides at a different rate — because the massif does not slide at a different
+rate. At 7 px/s this was never going to read as parallax anyway; the depth cue
+that survives is occlusion, which works.
+
+**Reopen if:** the rigid pan genuinely reads flat after living with it for a week,
+*or* the wallpaper grows a vertical camera move (the smear is purely horizontal).
+The remedy then is not a layer split but **separate authored mist planes at 2–3
+depths**, which are cheap precisely because they are structureless.
+
 ### D-025 — Ship 4 screens, not 16, in v1
 **Decision.** v1's world is 1920px (4 screens), one region, cross-faded loop.
 Extending to 8 and 16 is deferred until the first four are proven to match.

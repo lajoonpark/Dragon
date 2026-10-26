@@ -8,7 +8,7 @@ Read in this order. Each doc stands alone, but they build.
 | 10 | [Depth & Occlusion](10-depth-and-occlusion.md) | **The core mechanic.** How a dragon slips behind a mountain, and why not with layers |
 | 20 | [The Dragon](20-dragon-design.md) | Silhouette, proportion, the procedural body rig, palettes, and how it flies |
 | 25 | [Art Pipeline — superseded](25-art-pipeline.md) | Why procedural rock generation failed. The failure ledger (v1–v6, r12–r47). **Historical — read for the argument, not the method** |
-| 27 | [**Master Image Pipeline**](27-master-image-pipeline.md) | **How the background actually gets made now.** Generate a master image, reduce it to a true pixel grid, dismantle it into layers, extract depth. Code does not re-draw the rock |
+| 27 | [**Master Image Pipeline**](27-master-image-pipeline.md) | **How the background actually gets made now.** Generate a master image, reduce it to a true pixel grid, extract a depth field. Code does not re-draw the rock, and the image is **not** split into layers (D-026) |
 | 28 | [**Master Generation Prompt**](28-master-generation-prompt.md) | The literal prompt to paste into the image model, the negative prompt, the pre-acceptance checklist, and the backing plates |
 | 30 | [Scene & Composition](30-scene-composition.md) | The handscroll, depth stack, mountain archetypes, water, weather, shot list |
 | 35 | [Ambient Life](35-ambient-life.md) | **The other half.** Wind gusts, petals, waterfalls, birds, the hush, and the density budget |
@@ -39,6 +39,23 @@ The audit loop and what each round's failure taught is tabulated in
 `25-art-pipeline.md` — that ledger is the argument for the pipeline change. The two corrections it forced on the *plan* are recorded at
 the end of `10-depth-and-occlusion.md` (mist is opaque, not alpha) and
 `30-scene-composition.md` (bands stack front-to-back, not side by side).
+
+## Where it stands now — the background is proven
+
+Two questions were open at the start of this phase. Both are now answered with
+working code on the real master image:
+
+| Question | Answer | Report |
+|---|---|---|
+| Can a dragon pass behind a ridge without layers? | **Yes.** One depth test per pixel; 10/10 test frames had one unbroken body both in front of and behind scenery | [`reviews/c01-depth-test.md`](reviews/c01-depth-test.md) |
+| Does a flat image need splitting for parallax? | **No — and it cannot be.** Per-depth warping smears irreversibly; the content behind nearer objects does not exist. Rigid pan + drifting mist (D-026) | [`reviews/c01-parallax-test.md`](reviews/c01-parallax-test.md) |
+
+The reduction itself is also settled: 24 colours, 1440×810 crop, exact ÷3 to
+480×270 — [`reviews/c01-reduction.md`](reviews/c01-reduction.md).
+
+**Consequence: the layer split and its backing plates are off the project.**
+The "hole problem" (D-024) is closed on both halves — nothing is removed, and
+nothing slides relative to anything else.
 
 ## The four sentences
 
